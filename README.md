@@ -1,45 +1,30 @@
-# Fancaps Downloader
+# Fancaps Downloader Streamlit
 
-## About <a name = "about"></a>
+## Acknowledgements <a name = "acknowledgenents"></a>
 
-This project it's a simple Python script for download screencaps from https://fancaps.net.
+This project is made possible thanks to the amazing work done by the [fancaps-downloader](https://github.com/m-patino/fancaps-downloader) repository, created and maintained by [m-patino](https://github.com/m-patino). 
 
 ## Getting Started <a name = "getting_started"></a>
 
 ### Prerequisites
 
-To run this script you need to have Python 3.x installed, the Beautifulsoup4 and tqdm library:
+To run this script you need to have Python 3.x installed, the Beautifulsoup4, stqdm, request, and Streamlit library:
 
 #### python install: 
 https://www.python.org/downloads/
 
-#### Beautifulsoup4 and tqdm install: 
+#### Beautifulsoup4, stqdm, requests, streamlit install: 
 ```
-pip install beautifulsoup4 tqdm
+pip install beautifulsoup4 stqdm requests streamlit
 ```
 
 ## Usage <a name = "usage"></a>
 
-### Arguments
-`url`: Url of ressource to download
+### Input
+Input URL in the text box, and press submit button.
 
-`--output`: Folder used for download each images
-
-### Url support:
+### URL Support:
 * `https://fancaps.net/{tv|anime}/showimages.php?...`: Url of season page
 * `https://fancaps.net/{tv|anime}/episodeimages.php?...`: Url of episode page
 * `https://fancaps.net/movies/MovieImages.php?...`: Url of movie page
-
-Warning: Due to an issue with `&` caractère in args. Use double quote for the URL argument
-
-### Usage exemple:
-
-```
-python fancaps-downloader.py --output "Download" URL
-```
-In this exemple we download all pics of URL into Download folder
- 
-## TODO List <a name = "todo_list"></a>
-- Input txt file for bulk
-- Add more arguments
 
