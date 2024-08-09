@@ -1,22 +1,52 @@
-import argparse
-from scraper.crawler import Crawler
-from scraper.downloader import Downloader
-from scraper.utils.colors import Colors
 import os
+import streamlit as st
+import requests
+import zipfile
+import io
 
-parser = argparse.ArgumentParser()
-parser.add_argument('url', nargs='?', help='Url to start download')
-parser.add_argument('--output', type=str, default="Downloads", help='Path of folder')
-args = parser.parse_args()
+from scraper.crawler import Crawler
+from stqdm.stqdm import stqdm
 
-if __name__ == "__main__":
+st.title('Fancaps Downloader')
+st.markdown(
+    f'''Thanks to m-patino for the crawling code. His repo: <a href="https://github.com/m-patino/fancaps-downloader" target="_self">fancaps-downloader by m-patino</a>''',
+    unsafe_allow_html=True
+)
+tutor = '''URL support:
+
+https://fancaps.net/{tv|anime}/showimages.php?...: Url of season page
+https://fancaps.net/{tv|anime}/episodeimages.php?...: Url of episode page
+https://fancaps.net/movies/MovieImages.php?...: Url of movie page
+'''
+st.markdown(tutor)
+
+form = st.form(key='url_form')
+url_global = form.text_input(label='Enter URL')
+submit = form.form_submit_button(label='Submit')
+
+if submit:
     # Crawl
     crawler = Crawler()
-    links = crawler.crawl(args.url)
+    links_global = crawler.crawl(url_global)
+    zip_buffer = io.BytesIO()
 
-    # Download
-    downloader = Downloader()
-    for item in links:
-        Colors.print(f"Download to {item['subfolder']} started:", Colors.YELLOW)
-        path = os.path.join(args.output, item['subfolder'])
-        downloader.downloadUrls(path, item['links'])
+    with zipfile.ZipFile(zip_buffer, 'w') as zipf:
+        for item in links_global:
+            main_folder_name = item['subfolder'].split('/')[0]
+            subfolder = item['subfolder']
+            links = item['links']
+
+            for url in stqdm(links):
+                image_name = os.path.basename(url)
+                response = requests.get(url)
+                image_path = f"{subfolder}/{image_name}"
+                zipf.writestr(image_path, response.content)
+
+    zip_buffer.seek(0)
+
+    st.download_button(
+        label="Download Images ZIP",
+        data=zip_buffer,
+        file_name=f"{main_folder_name}.zip",
+        mime="application/zip"
+    )
