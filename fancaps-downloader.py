@@ -24,6 +24,8 @@ form = st.form(key='url_form')
 url_global = form.text_input(label='Enter URL')
 submit = form.form_submit_button(label='Submit')
 
+main_folder = []
+
 if submit:
     # Crawl
     crawler = Crawler()
@@ -32,7 +34,9 @@ if submit:
 
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
         for item in links_global:
-            main_folder_name = item['subfolder'].split('/')[0]
+            if not main_folder:
+                main_folder_name = item['subfolder'].split('/')[0]
+                main_folder.append(main_folder_name)
             subfolder = item['subfolder']
             links = item['links']
 
@@ -47,6 +51,6 @@ if submit:
     st.download_button(
         label="Download Images ZIP",
         data=zip_buffer,
-        file_name=f"{main_folder_name}.zip",
+        file_name=f"{main_folder[0]}.zip",
         mime="application/zip"
     )
