@@ -10,17 +10,17 @@ This project is made possible thanks to the amazing work done by the [fancaps-do
 
 To run this script you need to have Python 3.x installed, the Beautifulsoup4, stqdm, request, and Streamlit library:
 
-#### python install: 
+#### Python Install: 
 https://www.python.org/downloads/
 
-#### Requirements install: 
+#### Requirements Install: 
 ```
 pip install -r requirements.txt
 ```
 
 ## Usage <a name = "usage"></a>
 
-### Streamlit run: 
+### Streamlit Run: 
 ```
 streamlit run fancaps-downloader.py
 ```
