@@ -13,9 +13,9 @@ To run this script you need to have Python 3.x installed, the Beautifulsoup4, st
 #### python install: 
 https://www.python.org/downloads/
 
-#### Beautifulsoup4, stqdm, requests, streamlit install: 
+#### Requirements install: 
 ```
-pip install beautifulsoup4 stqdm requests streamlit
+pip install -r requirements.txt
 ```
 
 ## Usage <a name = "usage"></a>
