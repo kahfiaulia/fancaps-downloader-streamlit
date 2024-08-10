@@ -1,3 +1,5 @@
+import streamlit as st
+
 from bs4 import BeautifulSoup
 from scraper.crawlers import episode_crawler
 import re
@@ -21,16 +23,16 @@ class SeasonCrawler:
                 request = urllib.request.Request(currentUrl, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0'})
                 content = urllib.request.urlopen(request)
             except urllib.error.URLError as e:
-                Colors.print(f"Error occurred while opening the URL: {e.reason}", Colors.RED)
+                st.write(f"Error occurred while opening the URL: {e.reason}")
                 break
             except urllib.error.HTTPError as e:
-                Colors.print(f"HTTP Error: {e.code} {e.reason}", Colors.RED)
+                st.write(f"HTTP Error: {e.code} {e.reason}")
                 break
 
             try:
                 beautifulSoup = BeautifulSoup(content, 'html.parser')
             except Exception as e:
-                Colors.print(f"Error occurred while parsing the page: {e}", Colors.RED)
+                st.write(f"Error occurred while parsing the page: {e}")
                 break
 
             for DOMLink in beautifulSoup.find_all('a', class_='btn', href=re.compile("^.*?/episodeimages.php\?")):
@@ -56,8 +58,8 @@ class SeasonCrawler:
             try:
                 episodeResult = crawler.crawl(epLink)
                 picLinks.append(episodeResult)
-                Colors.print(f"\t{epLink} crawled", Colors.GREEN)
+                st.write(f"\t{epLink} crawled")
             except Exception as e:
-                Colors.print(f"Failed to crawl {epLink}: {e}", Colors.RED)
+                st.write(f"Failed to crawl {epLink}: {e}")
 
         return picLinks
