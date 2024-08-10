@@ -46,6 +46,8 @@ if submit:
                 image_path = f"{subfolder}/{image_name}"
                 zipf.writestr(image_path, response.content)
 
+            st.write(f"{subfolder} done.")
+
     zip_buffer.seek(0)
 
     st.download_button(
