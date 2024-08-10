@@ -20,8 +20,13 @@ pip install beautifulsoup4 stqdm requests streamlit
 
 ## Usage <a name = "usage"></a>
 
-### Input
-Input URL in the text box, and press submit button.
+### Streamlit run: 
+```
+streamlit run fancaps-downloader.py
+```
+
+### Input:
+Input URL in the text box, and press submit button. Then download the zipped file.
 
 ### URL Support:
 * `https://fancaps.net/{tv|anime}/showimages.php?...`: Url of season page
