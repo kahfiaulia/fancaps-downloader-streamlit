@@ -1,4 +1,4 @@
 beautifulsoup4 
 stqdm 
 requests 
-streamlit==1.29.0
+streamlit-nightly
