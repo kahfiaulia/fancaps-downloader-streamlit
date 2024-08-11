@@ -5,7 +5,7 @@ import zipfile
 import io
 
 from scraper.crawler import Crawler
-from stqdm.stqdm import stqdm
+# from stqdm.stqdm import stqdm
 
 st.title('Fancaps Downloader')
 st.markdown(
@@ -40,7 +40,7 @@ if submit:
             subfolder = item['subfolder']
             links = item['links']
 
-            for url in stqdm(links):
+            for url in links:
                 image_name = os.path.basename(url)
                 response = requests.get(url)
                 image_path = f"{subfolder}/{image_name}"
