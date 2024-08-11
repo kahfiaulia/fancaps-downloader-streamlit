@@ -25,5 +25,5 @@ class Crawler:
         else:
             return []
 
-        st.write(f"{url} crawling finished.",Colors.YELLOW)
+        st.write(f"{url} crawling finished.")
         return output
