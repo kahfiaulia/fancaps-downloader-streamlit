@@ -41,6 +41,7 @@ def create_zip_files(links_global, main_folder_name):
         
         zip_buffer.seek(0)
         zip_buffers.append((f"{main_folder_name}_part_{i+1}.zip", zip_buffer))
+        st.write(f"{main_folder_name}_part_{i+1}.zip ready")
 
     return zip_buffers
 
