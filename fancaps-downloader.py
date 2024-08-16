@@ -20,18 +20,13 @@ https://fancaps.net/movies/MovieImages.php?...: Url of movie page
 '''
 st.markdown(tutor)
 
-form = st.form(key='url_form')
-url_global = form.text_input(label='Enter URL')
-submit = form.form_submit_button(label='Submit')
-
-main_folder = []
-
-if submit:
-    # Crawl
+@st.cache_data
+def crawl_and_download(url):
     crawler = Crawler()
-    links_global = crawler.crawl(url_global)
+    links_global = crawler.crawl(url)
     zip_buffer = io.BytesIO()
 
+    main_folder = []
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
         for item in links_global:
             if not main_folder:
@@ -46,9 +41,15 @@ if submit:
                 image_path = f"{subfolder}/{image_name}"
                 zipf.writestr(image_path, response.content)
 
-            st.write(f"{subfolder} done.")
-
     zip_buffer.seek(0)
+    return zip_buffer, main_folder
+
+form = st.form(key='url_form')
+url_global = form.text_input(label='Enter URL')
+submit = form.form_submit_button(label='Submit')
+
+if submit:
+    zip_buffer, main_folder = crawl_and_download(url_global)
 
     st.download_button(
         label="Download Images ZIP",

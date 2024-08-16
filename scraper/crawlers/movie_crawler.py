@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 import urllib.request
 
 class MovieCrawler:
-    @st.cache
     def crawl(self, url):
         picLinks = []
         currentUrl = url

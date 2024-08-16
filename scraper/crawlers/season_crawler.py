@@ -11,7 +11,6 @@ class SeasonCrawler:
     url = None
     name = None
 
-    @st.cache
     def crawl(self, url):
         epLinks = []
         picLinks = []
