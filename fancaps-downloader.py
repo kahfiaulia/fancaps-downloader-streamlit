@@ -1,6 +1,7 @@
 import os
 import streamlit as st
-import requests
+import aiohttp
+import asyncio
 import zipfile
 import io
 
@@ -21,76 +22,80 @@ https://fancaps.net/movies/MovieImages.php?...: Url of movie page
 '''
 st.markdown(tutor)
 
-def create_zip_files(links_global, main_folder_name):
-    zip_buffers = []
-    subfolder_groups = [links_global[i:i+3] for i in range(0, len(links_global), 3)]
-    
-    for i, group in enumerate(subfolder_groups):
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, 'w') as zipf:
-            for item in group:
+async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
+    image_name = os.path.basename(url)
+    image_path = f"{subfolder}/{image_name}"
+    for attempt in range(retries):
+        try:
+            async with session.get(url, timeout=10) as response:
+                response.raise_for_status()
+                zipf.writestr(image_path, await response.read())
+                st.write(f"Downloaded: {image_path}")
+                return  # Exit if the download succeeds
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            st.warning(f"Attempt {attempt+1} failed for {url}: {e}")
+            if attempt < retries - 1:
+                await asyncio.sleep(delay)  # Wait before retrying
+    else:
+        st.error(f"Failed to download {url} after {retries} attempts.")
+        return
+
+async def download_images_async(links_group, main_folder_name, part_number):
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w') as zipf:
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for item in links_group:
                 subfolder = item['subfolder']
                 links = item['links']
 
-                for url in stqdm(links):
-                    image_name = os.path.basename(url)
-                    response = requests.get(url)
-                    response.raise_for_status()
-                    image_path = f"{subfolder}/{image_name}"
-                    zipf.writestr(image_path, response.content)
-        
-        zip_buffer.seek(0)
-        zip_buffers.append((f"{main_folder_name}_part_{i+1}.zip", zip_buffer))
-        st.write(f"{main_folder_name}_part_{i+1}.zip ready")
-
-    return zip_buffers
-
-form = st.form(key='url_form')
-url_global = form.text_input(label='Enter URL')
-submit = form.form_submit_button(label='Submit')
-
-main_folder = []
-
-if submit:
-    # Crawl
-    crawler = Crawler()
-    links_global = crawler.crawl(url_global)
-    
-    if links_global:
-        main_folder_name = links_global[0]['subfolder'].split('/')[0]
-        main_folder.append(main_folder_name)
-        
-        if len(links_global) >= 6:
-            zip_files = create_zip_files(links_global, main_folder_name)
-            
-            for file_name, zip_buffer in zip_files:
-                st.download_button(
-                    label=f"Download {file_name}",
-                    data=zip_buffer,
-                    file_name=file_name,
-                    mime="application/zip"
+                st.write(f"Processing subfolder: **{subfolder}**")
+                tasks.extend(
+                    download_image(session, url, subfolder, zipf)
+                    for url in links
                 )
+
+            for task in stqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Downloading images"):
+                await task
+
+            st.write(f"Completed processing subfolder: **{subfolder}**")
+
+    zip_buffer.seek(0)
+    zip_file_name = f"{main_folder_name}_part_{part_number}.zip"
+    st.download_button(
+        label=f"Download {zip_file_name}",
+        data=zip_buffer,
+        file_name=zip_file_name,
+        mime="application/zip"
+    )
+    st.success(f"{zip_file_name} is ready for download.")
+
+def main():
+    form = st.form(key='url_form')
+    url_global = form.text_input(label='Enter URL')
+    submit = form.form_submit_button(label='Submit')
+
+    if submit:
+        st.info("Starting the crawling process...")
+        crawler = Crawler()
+        links_global = crawler.crawl(url_global)
+
+        if not links_global:
+            st.warning("No links found.")
         else:
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w') as zipf:
-                for item in links_global:
-                    subfolder = item['subfolder']
-                    links = item['links']
+            main_folder_name = links_global[0]['subfolder'].split('/')[0]
 
-                    for url in stqdm(links):
-                        image_name = os.path.basename(url)
-                        response = requests.get(url)
-                        response.raise_for_status()
-                        image_path = f"{subfolder}/{image_name}"
-                        zipf.writestr(image_path, response.content)
-                
-                st.write(f"{subfolder} done.")
+            total_subfolders = len(links_global)
+            if total_subfolders >= 6:
+                subfolder_groups = [links_global[i:i+3] for i in range(0, total_subfolders, 3)]
+                for idx, group in enumerate(subfolder_groups, start=1):
+                    st.write(f"Creating ZIP file part {idx}...")
+                    asyncio.run(download_images_async(group, main_folder_name, idx))
+            else:
+                st.write("Creating a single ZIP file...")
+                asyncio.run(download_images_async(links_global, main_folder_name, 1))
 
-            zip_buffer.seek(0)
+        st.success("All processes completed.")
 
-            st.download_button(
-                label="Download Images ZIP",
-                data=zip_buffer,
-                file_name=f"{main_folder[0]}.zip",
-                mime="application/zip"
-            )
+if __name__ == "__main__":
+    main()
