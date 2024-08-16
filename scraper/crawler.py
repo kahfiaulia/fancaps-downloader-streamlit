@@ -5,6 +5,7 @@ from scraper.crawlers import episode_crawler, season_crawler, movie_crawler
 from scraper.utils.colors import Colors
 
 class Crawler:
+    @st.cache
     def crawl(self, url):
         Colors.print(f"{url} crawling started:",Colors.YELLOW)
 

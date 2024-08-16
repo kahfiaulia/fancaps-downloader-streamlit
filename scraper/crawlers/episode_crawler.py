@@ -1,3 +1,5 @@
+import streamlit as st
+
 import re
 from bs4 import BeautifulSoup
 import urllib.request
@@ -5,6 +7,7 @@ import urllib.error
 import os
 
 class EpisodeCrawler:
+    @st.cache
     def crawl(self, url):
         picLinks = []  # List to store the picture links
         currentUrl = url  # Current URL to crawl
