@@ -10,6 +10,19 @@ from stqdm.stqdm import stqdm
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
+st.title('Fancaps Downloader')
+st.markdown(
+    f'''Thanks to m-patino for the crawling code. His repo: <a href="https://github.com/m-patino/fancaps-downloader" target="_self">fancaps-downloader by m-patino</a>''',
+    unsafe_allow_html=True
+)
+tutor = '''URL support:
+
+https://fancaps.net/{tv|anime}/showimages.php?...: Url of season page
+https://fancaps.net/{tv|anime}/episodeimages.php?...: Url of episode page
+https://fancaps.net/movies/MovieImages.php?...: Url of movie page
+'''
+st.markdown(tutor)
+
 def requests_retry_session(retries=3, backoff_factor=0.3, status_forcelist=(500, 502, 504)):
     session = requests.Session()
     retry = Retry(
