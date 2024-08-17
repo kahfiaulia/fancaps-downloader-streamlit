@@ -4,7 +4,6 @@ import aiohttp
 import asyncio
 import zipfile
 import io
-import tempfile
 from scraper.crawler import Crawler
 
 
