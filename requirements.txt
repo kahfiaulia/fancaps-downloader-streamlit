@@ -3,3 +3,4 @@ stqdm
 requests
 aiohttp
 asyncio
+tempfile

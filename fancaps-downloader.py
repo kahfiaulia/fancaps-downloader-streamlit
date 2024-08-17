@@ -4,7 +4,7 @@ import aiohttp
 import asyncio
 import zipfile
 import io
-
+import tempfile
 from scraper.crawler import Crawler
 
 
@@ -21,7 +21,7 @@ https://fancaps.net/movies/MovieImages.php?...: Url of movie page
 '''
 st.markdown(tutor)
 
-async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
+async def download_image(session, url, subfolder, temp_file_path, retries=3, delay=2):
     image_name = os.path.basename(url)
     image_path = f"{subfolder}/{image_name}"
 
@@ -29,52 +29,48 @@ async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
         try:
             async with session.get(url, timeout=10) as response:
                 response.raise_for_status()
-                zipf.writestr(image_path, await response.read())
-                return
+                with open(temp_file_path, 'wb') as temp_file:
+                    temp_file.write(await response.read())
+                return temp_file_path
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             st.warning(f"Attempt {attempt+1} failed for {url}: {e}")
             if attempt < retries - 1:
                 await asyncio.sleep(delay)
             else:
                 st.error(f"Failed to download {url} after {retries} attempts.")
-                return
+                return None
 
 async def download_images_async(links_global, main_folder_name):
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w') as zipf:
+    tasks = []
+    semaphore = asyncio.Semaphore(5)
+    
+    async def bounded_download(url, subfolder, temp_file_path):
+        async with semaphore:
+            return await download_image(session, url, subfolder, temp_file_path)
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
         async with aiohttp.ClientSession() as session:
-            total_tasks = sum(len(item['links']) for item in links_global)
-            progress_bar = st.progress(0)
-            completed_tasks = 0
-
-            semaphore = asyncio.Semaphore(5)
-
-            async def bounded_download(url, subfolder):
-                async with semaphore:
-                    await download_image(session, url, subfolder, zipf)
-
-            tasks = []
             for item in links_global:
                 subfolder = item['subfolder']
                 links = item['links']
-
-                st.write(f"Processing subfolder: **{subfolder}**")
-
-                tasks.extend(bounded_download(url, subfolder) for url in links)
-
-            for task in asyncio.as_completed(tasks):
-                try:
-                    await task
-                    completed_tasks += 1
-                    progress_bar.progress(completed_tasks / total_tasks)
-                except Exception as e:
-                    st.error(f"Error in task: {e}")
-
-            st.write("Completed processing all subfolders.")
-
-    zip_buffer.seek(0)
-    zip_file_name = f"{main_folder_name}.zip"
-    return zip_buffer.getvalue(), zip_file_name
+                
+                for link in links:
+                    temp_file_path = os.path.join(temp_dir, os.path.basename(link))
+                    tasks.append(bounded_download(link, subfolder, temp_file_path))
+            
+            completed_files = await asyncio.gather(*tasks)
+    
+        # Create the ZIP file with the downloaded images
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w') as zipf:
+            for temp_file in completed_files:
+                if temp_file:
+                    arcname = os.path.basename(temp_file)
+                    zipf.write(temp_file, arcname)
+        
+        zip_buffer.seek(0)
+        zip_file_name = f"{main_folder_name}.zip"
+        return zip_buffer.getvalue(), zip_file_name
 
 def main():
     form = st.form(key='url_form')
@@ -89,7 +85,6 @@ def main():
         if not all_batches:
             st.warning("No links found.")
         else:
-            # Flatten all subfolders into a single list
             selected_batches = [item for sublist in all_batches for item in sublist]
 
             if selected_batches:
