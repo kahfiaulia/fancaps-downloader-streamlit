@@ -21,7 +21,6 @@ https://fancaps.net/movies/MovieImages.php?...: Url of movie page
 '''
 st.markdown(tutor)
 
-@st.cache
 async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
     image_name = os.path.basename(url)
     image_path = f"{subfolder}/{image_name}"
@@ -39,8 +38,7 @@ async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
             else:
                 st.error(f"Failed to download {url} after {retries} attempts.")
                 return
-            
-@st.cache            
+                  
 async def download_images_async(links_global, main_folder_name):
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
