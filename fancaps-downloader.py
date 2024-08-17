@@ -58,8 +58,6 @@ async def download_images_async(links_global, main_folder_name, start_idx, end_i
                 subfolder = item['subfolder']
                 links = item['links']
 
-                st.write(f"Processing subfolder: **{subfolder}**")
-
                 tasks.extend(bounded_download(url, subfolder) for url in links)
 
             for task in asyncio.as_completed(tasks):
@@ -85,8 +83,7 @@ def main():
     if submit:
         st.info("Starting the crawling process...")
         crawler = Crawler()
-        batch_size = 10  # Adjust batch size as needed
-        all_batches = crawler.crawl_in_batches(url_global, batch_size)
+        all_batches = crawler.crawl_in_batches(url_global)
 
         if not all_batches:
             st.warning("No links found.")
@@ -102,15 +99,16 @@ def main():
             # Flatten the selected batches into a single list
             selected_batches = [item for sublist in all_batches[start_batch:end_batch] for item in sublist]
 
-            main_folder_name = selected_batches[0]['subfolder'].split('/')[0]
-            st.write(f"Creating ZIP file for the {half_option.lower()}...")
+            if selected_batches:
+                main_folder_name = selected_batches[0]['subfolder'].split('/')[0]
+                st.write(f"Creating ZIP file for the {half_option.lower()}...")
 
-            try:
-                zip_data, zip_file_name = asyncio.run(download_images_async(selected_batches, main_folder_name, 0, len(selected_batches)))
-                st.session_state['zip_buffer'] = zip_data
-                st.session_state['zip_file_name'] = zip_file_name
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
+                try:
+                    zip_data, zip_file_name = asyncio.run(download_images_async(selected_batches, main_folder_name, 0, len(selected_batches)))
+                    st.session_state['zip_buffer'] = zip_data
+                    st.session_state['zip_file_name'] = zip_file_name
+                except Exception as e:
+                    st.error(f"An error occurred: {e}")
 
         if 'zip_buffer' in st.session_state:
             st.download_button(
