@@ -84,7 +84,7 @@ def main():
 
     if submit:
         st.info("Starting the crawling process...")
-        crawler = SeasonCrawler()
+        crawler = Crawler()
         batch_size = 10  # Adjust batch size as needed
         all_batches = crawler.crawl_in_batches(url_global, batch_size)
 
