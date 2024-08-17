@@ -29,28 +29,37 @@ async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
             async with session.get(url, timeout=10) as response:
                 response.raise_for_status()
                 zipf.writestr(image_path, await response.read())
+                st.write(f"Downloaded: {image_path}")
                 return  # Exit if the download succeeds
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             st.warning(f"Attempt {attempt+1} failed for {url}: {e}")
             if attempt < retries - 1:
                 await asyncio.sleep(delay)  # Wait before retrying
-    else:
-        st.error(f"Failed to download {url} after {retries} attempts.")
-        return
-
+            else:
+                st.error(f"Failed to download {url} after {retries} attempts.")
+                return
+            
 async def download_images_async(links_global, main_folder_name):
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
         async with aiohttp.ClientSession() as session:
             total_tasks = sum(len(item['links']) for item in links_global)
             progress_bar = st.progress(0)
-            completed_tasks = 0
+            completed_tasks = 0# Limit concurrent downloads
+            semaphore = asyncio.Semaphore(5)
+
+            async def bounded_download(url, subfolder):
+                async with semaphore:
+                    await download_image(session, url, subfolder, zipf)
+
             for item in links_global:
                 subfolder = item['subfolder']
                 links = item['links']
 
+                st.write(f"Processing subfolder: **{subfolder}**")
+
                 tasks = [
-                    download_image(session, url, subfolder, zipf)
+                    bounded_download(url, subfolder)
                     for url in links
                 ]
 
@@ -89,7 +98,10 @@ def main():
         else:
             main_folder_name = links_global[0]['subfolder'].split('/')[0]
             st.write("Creating a single ZIP file...")
-            asyncio.run(download_images_async(links_global, main_folder_name))
+            try:
+                asyncio.run(download_images_async(links_global, main_folder_name))
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
 
         st.success("All processes completed.")
 
