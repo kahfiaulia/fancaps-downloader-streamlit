@@ -29,22 +29,23 @@ async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
             async with session.get(url, timeout=10) as response:
                 response.raise_for_status()
                 zipf.writestr(image_path, await response.read())
-                return  # Exit if the download succeeds
+                st.write(f"Downloaded: {image_path}")
+                return
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             st.warning(f"Attempt {attempt+1} failed for {url}: {e}")
             if attempt < retries - 1:
-                await asyncio.sleep(delay)  # Wait before retrying
+                await asyncio.sleep(delay)
             else:
                 st.error(f"Failed to download {url} after {retries} attempts.")
                 return
-
 async def download_images_async(links_global, main_folder_name):
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
         async with aiohttp.ClientSession() as session:
             total_tasks = sum(len(item['links']) for item in links_global)
             progress_bar = st.progress(0)
-            completed_tasks = 0# Limit concurrent downloads
+            completed_tasks = 0
+
             semaphore = asyncio.Semaphore(5)
 
             async def bounded_download(url, subfolder):
@@ -55,10 +56,9 @@ async def download_images_async(links_global, main_folder_name):
                 subfolder = item['subfolder']
                 links = item['links']
 
-                tasks = [
-                    bounded_download(url, subfolder)
-                    for url in links
-                ]
+                st.write(f"Processing subfolder: **{subfolder}**")
+
+                tasks = [bounded_download(url, subfolder) for url in links]
 
                 for task in asyncio.as_completed(tasks):
                     try:
@@ -71,14 +71,9 @@ async def download_images_async(links_global, main_folder_name):
                 st.write(f"Completed processing subfolder: **{subfolder}**")
 
     zip_buffer.seek(0)
-    zip_file_name = f"{main_folder_name}.zip"
-    st.download_button(
-        label=f"Download {zip_file_name}",
-        data=zip_buffer,
-        file_name=zip_file_name,
-        mime="application/zip"
-    )
-    st.success(f"{zip_file_name} is ready for download.")
+    zip_file_name = f"{main_folder_name}.zip"# Save the ZIP buffer to session state
+    st.session_state['zip_buffer'] = zip_buffer.getvalue()
+    st.session_state['zip_file_name'] = zip_file_name
 
 def main():
     form = st.form(key='url_form')
@@ -100,7 +95,16 @@ def main():
             except Exception as e:
                 st.error(f"An error occurred: {e}")
 
-        st.success("All processes completed.")
+        if'zip_buffer'in st.session_state:
+            st.download_button(
+                label=f"Download {st.session_state['zip_file_name']}",
+                data=st.session_state['zip_buffer'],
+                file_name=st.session_state['zip_file_name'],
+                mime="application/zip"
+            )
+            st.success("ZIP file is ready for download.")
+        else:
+            st.warning("No ZIP file available.")
 
 if __name__ == "__main__":
     main()
