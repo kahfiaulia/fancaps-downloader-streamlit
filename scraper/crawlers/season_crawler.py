@@ -62,8 +62,3 @@ class SeasonCrawler:
                 st.write(f"Failed to crawl {epLink}: {e}")
 
         return picLinks
-
-    def crawl_in_batches(self, url, batch_size):
-        picLinks = self.crawl(url)
-        total_batches = (len(picLinks) + batch_size - 1) // batch_size
-        return [picLinks[i*batch_size:(i+1)*batch_size] for i in range(total_batches)]

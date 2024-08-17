@@ -13,13 +13,7 @@ class Crawler:
         if urlType == 'season':
             st.write(f"\t\"{urlType}\" url detected")
             crawler = season_crawler.SeasonCrawler()
-            all_pic_links = crawler.crawl(url)
-            num_subfolders = len(all_pic_links)
-            batch_size = num_subfolders // 2
-            if batch_size == 0:
-                batch_size = 1  # Ensure batch size is at least 1
-            total_batches = (num_subfolders + batch_size - 1) // batch_size
-            output = [all_pic_links[i*batch_size:(i+1)*batch_size] for i in range(total_batches)]
+            output = crawler.crawl(url)
         elif urlType == 'episode':
             st.write(f"\t\"{urlType}\" url detected")
             crawler = episode_crawler.EpisodeCrawler()

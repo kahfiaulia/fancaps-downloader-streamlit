@@ -39,11 +39,11 @@ async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
                 st.error(f"Failed to download {url} after {retries} attempts.")
                 return
 
-async def download_images_async(links_global, main_folder_name, start_idx, end_idx):
+async def download_images_async(links_global, main_folder_name):
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
         async with aiohttp.ClientSession() as session:
-            total_tasks = sum(len(item['links']) for item in links_global[start_idx:end_idx])
+            total_tasks = sum(len(item['links']) for item in links_global)
             progress_bar = st.progress(0)
             completed_tasks = 0
 
@@ -54,9 +54,11 @@ async def download_images_async(links_global, main_folder_name, start_idx, end_i
                     await download_image(session, url, subfolder, zipf)
 
             tasks = []
-            for item in links_global[start_idx:end_idx]:
+            for item in links_global:
                 subfolder = item['subfolder']
                 links = item['links']
+
+                st.write(f"Processing subfolder: **{subfolder}**")
 
                 tasks.extend(bounded_download(url, subfolder) for url in links)
 
@@ -68,16 +70,15 @@ async def download_images_async(links_global, main_folder_name, start_idx, end_i
                 except Exception as e:
                     st.error(f"Error in task: {e}")
 
-            st.write(f"Completed processing subfolders from {start_idx} to {end_idx}.")
+            st.write("Completed processing all subfolders.")
 
     zip_buffer.seek(0)
-    zip_file_name = f"{main_folder_name}_{start_idx}_{end_idx}.zip"
+    zip_file_name = f"{main_folder_name}.zip"
     return zip_buffer.getvalue(), zip_file_name
 
 def main():
     form = st.form(key='url_form')
     url_global = form.text_input(label='Enter URL')
-    half_option = form.radio("Select which half to process:", ["First Half", "Second Half"])
     submit = form.form_submit_button(label='Submit')
 
     if submit:
@@ -88,23 +89,15 @@ def main():
         if not all_batches:
             st.warning("No links found.")
         else:
-            num_batches = len(all_batches)
-            mid_point = num_batches // 2
-
-            if half_option == "First Half":
-                start_batch, end_batch = 0, mid_point
-            elif half_option == "Second Half":
-                start_batch, end_batch = mid_point, num_batches
-
-            # Flatten the selected batches into a single list
-            selected_batches = [item for sublist in all_batches[start_batch:end_batch] for item in sublist]
+            # Flatten all subfolders into a single list
+            selected_batches = [item for sublist in all_batches for item in sublist]
 
             if selected_batches:
                 main_folder_name = selected_batches[0]['subfolder'].split('/')[0]
-                st.write(f"Creating ZIP file for the {half_option.lower()}...")
+                st.write("Creating ZIP file...")
 
                 try:
-                    zip_data, zip_file_name = asyncio.run(download_images_async(selected_batches, main_folder_name, 0, len(selected_batches)))
+                    zip_data, zip_file_name = asyncio.run(download_images_async(selected_batches, main_folder_name))
                     st.session_state['zip_buffer'] = zip_data
                     st.session_state['zip_file_name'] = zip_file_name
                 except Exception as e:
