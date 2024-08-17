@@ -55,7 +55,7 @@ async def download_images_async(links_global, start_idx, end_idx, zip_name):
                 subfolder = item['subfolder']
                 links = item['links']
 
-                tasks.extend(bounded_download(url, subfolder) for url in links)
+                tasks.extend([bounded_download(url, subfolder) for url in links])
 
             total_tasks = len(tasks)
             progress_bar = st.progress(0)
