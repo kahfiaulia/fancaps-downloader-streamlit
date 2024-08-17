@@ -27,3 +27,15 @@ class Crawler:
 
         st.write(f"{url} crawling finished.")
         return output
+    
+    def crawl_in_batches(self, url, batch_size):
+        urlSupport = UrlSupport()
+        urlType = urlSupport.getType(url)
+
+        if urlType == 'season':
+            crawler = season_crawler.SeasonCrawler()  # SeasonCrawler instance
+            all_pic_links = crawler.crawl(url)
+            total_batches = (len(all_pic_links) + batch_size - 1) // batch_size
+            return [all_pic_links[i*batch_size:(i+1)*batch_size] for i in range(total_batches)]
+        else:
+            raise ValueError(f"Batch processing is only supported for 'season' type URLs.")
