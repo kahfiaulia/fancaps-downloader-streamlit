@@ -83,7 +83,7 @@ def main():
     if submit:
         st.info("Starting the crawling process...")
         crawler = Crawler()
-        all_batches = crawler.crawl_in_batches(url_global)
+        all_batches = crawler.crawl(url_global)
 
         if not all_batches:
             st.warning("No links found.")
