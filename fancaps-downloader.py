@@ -36,7 +36,6 @@ async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
             async with session.get(url, timeout=10) as response:
                 response.raise_for_status()
                 zipf.writestr(image_path, await response.read())
-                st.write(f"Downloaded: {image_path}")
                 return  # Exit if the download succeeds
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             st.warning(f"Attempt {attempt+1} failed for {url}: {e}")
@@ -56,8 +55,6 @@ async def download_images_async(links_global, main_folder_name):
             for item in links_global:
                 subfolder = item['subfolder']
                 links = item['links']
-
-                st.write(f"Processing subfolder: **{subfolder}**")
 
                 tasks = [
                     download_image(session, url, subfolder, zipf)
