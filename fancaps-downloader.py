@@ -38,7 +38,7 @@ async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
             else:
                 st.error(f"Failed to download {url} after {retries} attempts.")
                 return
-                  
+
 async def download_images_async(links_global, main_folder_name):
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
@@ -83,7 +83,6 @@ async def download_images_async(links_global, main_folder_name):
     )
     st.success(f"{zip_file_name} is ready for download.")
 
-@st.cache
 def main():
     form = st.form(key='url_form')
     url_global = form.text_input(label='Enter URL')
