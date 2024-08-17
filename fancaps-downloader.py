@@ -21,28 +21,28 @@ https://fancaps.net/movies/MovieImages.php?...: Url of movie page
 '''
 st.markdown(tutor)
 
-async def download_image(session, url, subfolder, temp_dir, retries=3, delay=2):
+async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
     image_name = os.path.basename(url)
-    temp_file_path = os.path.join(temp_dir, image_name)
+    image_path = f"{subfolder}/{image_name}"
 
     for attempt in range(retries):
         try:
             async with session.get(url, timeout=10) as response:
                 response.raise_for_status()
-                with open(temp_file_path, 'wb') as temp_file:
-                    temp_file.write(await response.read())
-                st.write(f"Downloaded: {image_name}")
-                return temp_file_path
+                zipf.writestr(image_path, await response.read())
+                st.write(f"Downloaded: {image_path}")
+                return
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             st.warning(f"Attempt {attempt+1} failed for {url}: {e}")
             if attempt < retries - 1:
                 await asyncio.sleep(delay)
             else:
                 st.error(f"Failed to download {url} after {retries} attempts.")
-                return None
+                return
 
 async def download_images_async(links_global, main_folder_name):
-    with tempfile.TemporaryDirectory() as temp_dir:
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w') as zipf:
         async with aiohttp.ClientSession() as session:
             total_tasks = sum(len(item['links']) for item in links_global)
             progress_bar = st.progress(0)
@@ -52,34 +52,31 @@ async def download_images_async(links_global, main_folder_name):
 
             async def bounded_download(url, subfolder):
                 async with semaphore:
-                    return await download_image(session, url, subfolder, temp_dir)
+                    await download_image(session, url, subfolder, zipf)
 
-            tasks = []
             for item in links_global:
                 subfolder = item['subfolder']
                 links = item['links']
 
                 st.write(f"Processing subfolder: **{subfolder}**")
 
-                for url in links:
-                    tasks.append(bounded_download(url, subfolder))
+                tasks = [bounded_download(url, subfolder) for url in links]
 
-            downloaded_files = await asyncio.gather(*tasks)
+                for task in asyncio.as_completed(tasks):
+                    try:
+                        await task
+                        completed_tasks += 1
+                        progress_bar.progress(completed_tasks / total_tasks)
+                    except Exception as e:
+                        st.error(f"Error in task: {e}")
 
-            # Create ZIP file
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, 'w') as zipf:
-                for file_path in downloaded_files:
-                    if file_path:
-                        arcname = os.path.join(os.path.basename(file_path))
-                        zipf.write(file_path, arcname)
+                st.write(f"Completed processing subfolder: **{subfolder}**")
 
-            zip_buffer.seek(0)
-            zip_file_name = f"{main_folder_name}.zip"
-
-            # Save the ZIP buffer to session state
-            st.session_state['zip_buffer'] = zip_buffer.getvalue()
-            st.session_state['zip_file_name'] = zip_file_name
+    zip_buffer.seek(0)
+    zip_file_name = f"{main_folder_name}.zip"
+    # Save the ZIP buffer to session state
+    st.session_state['zip_buffer'] = zip_buffer.getvalue()
+    st.session_state['zip_file_name'] = zip_file_name
 
 def main():
     form = st.form(key='url_form')
