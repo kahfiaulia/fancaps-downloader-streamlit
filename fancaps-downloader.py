@@ -30,6 +30,7 @@ async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
             async with session.get(url, timeout=10) as response:
                 response.raise_for_status()
                 zipf.writestr(image_path, await response.read())
+                st.write(f"Downloaded: {image_path}")
                 return
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             st.warning(f"Attempt {attempt+1} failed for {url}: {e}")
@@ -39,35 +40,36 @@ async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
                 st.error(f"Failed to download {url} after {retries} attempts.")
                 return
 
-async def download_images_async(links_global, start_idx, end_idx, zip_name):
+async def download_images_for_range(links_global, start_idx, end_idx, zip_name):
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
         async with aiohttp.ClientSession() as session:
-            tasks = []
             semaphore = asyncio.Semaphore(5)
             
             async def bounded_download(url, subfolder):
                 async with semaphore:
                     await download_image(session, url, subfolder, zipf)
 
+            tasks = []
             for idx in range(start_idx, end_idx):
                 item = links_global[idx]
                 subfolder = item['subfolder']
                 links = item['links']
-
-                tasks.extend([bounded_download(url, subfolder) for url in links])
+                st.write(f"Processing subfolder: **{subfolder}**")
+                tasks.extend(bounded_download(url, subfolder) for url in links)
 
             total_tasks = len(tasks)
-            progress_bar = st.progress(0)
-            completed_tasks = 0
+            if total_tasks > 0:
+                progress_bar = st.progress(0)
+                completed_tasks = 0
 
-            for task in asyncio.as_completed(tasks):
-                try:
-                    await task
-                    completed_tasks += 1
-                    progress_bar.progress(completed_tasks / total_tasks)
-                except Exception as e:
-                    st.error(f"Error in task: {e}")
+                for task in asyncio.as_completed(tasks):
+                    try:
+                        await task
+                        completed_tasks += 1
+                        progress_bar.progress(completed_tasks / total_tasks)
+                    except Exception as e:
+                        st.error(f"Error in task: {e}")
 
             st.write(f"Completed processing subfolders: {start_idx} to {end_idx}")
 
@@ -95,7 +97,7 @@ def main():
             if 'zip_buffer_first_half' not in st.session_state:
                 st.write("Creating ZIP file for the first half...")
                 try:
-                    asyncio.run(download_images_async(links_global, 0, mid_point, f"{main_folder_name}_part_1.zip"))
+                    asyncio.run(download_images_for_range(links_global, 0, mid_point, f"{main_folder_name}_part_1.zip"))
                 except Exception as e:
                     st.error(f"An error occurred: {e}")
 
@@ -106,11 +108,12 @@ def main():
                     file_name=st.session_state['zip_file_name_first_half'],
                     mime="application/zip"
                 )
+                st.write("Click the button above to download the first half.")
 
                 if 'zip_buffer_second_half' not in st.session_state:
                     st.write("Creating ZIP file for the second half...")
                     try:
-                        asyncio.run(download_images_async(links_global, mid_point, num_subfolders, f"{main_folder_name}_part_2.zip"))
+                        asyncio.run(download_images_for_range(links_global, mid_point, num_subfolders, f"{main_folder_name}_part_2.zip"))
                     except Exception as e:
                         st.error(f"An error occurred: {e}")
 
@@ -121,6 +124,7 @@ def main():
                         file_name=st.session_state['zip_file_name_second_half'],
                         mime="application/zip"
                     )
+                    st.write("Click the button above to download the second half.")
 
 if __name__ == "__main__":
     main()
