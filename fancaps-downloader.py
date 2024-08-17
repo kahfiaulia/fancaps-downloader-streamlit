@@ -21,13 +21,6 @@ https://fancaps.net/movies/MovieImages.php?...: Url of movie page
 '''
 st.markdown(tutor)
 
-import os
-import io
-import zipfile
-import aiohttp
-import asyncio
-import streamlit as st
-
 async def download_image(session, url, subfolder, zipf, retries=3, delay=2):
     image_name = os.path.basename(url)
     image_path = f"{subfolder}/{image_name}"
@@ -62,9 +55,12 @@ async def download_images_async(links_global, main_folder_name):
                 ]
 
                 for task in asyncio.as_completed(tasks):
-                    await task
-                    completed_tasks += 1
-                    progress_bar.progress(completed_tasks / total_tasks)
+                    try:
+                        await task
+                        completed_tasks += 1
+                        progress_bar.progress(completed_tasks / total_tasks)
+                    except Exception as e:
+                        st.error(f"Error in task: {e}")
 
                 st.write(f"Completed processing subfolder: **{subfolder}**")
 
