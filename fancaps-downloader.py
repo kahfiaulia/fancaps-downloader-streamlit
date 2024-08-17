@@ -84,24 +84,29 @@ def main():
 
     if submit:
         st.info("Starting the crawling process...")
-        crawler = Crawler()
-        links_global = crawler.crawl(url_global)
+        crawler = SeasonCrawler()
+        batch_size = 10  # Adjust batch size as needed
+        all_batches = crawler.crawl_in_batches(url_global, batch_size)
 
-        if not links_global:
+        if not all_batches:
             st.warning("No links found.")
         else:
-            num_subfolders = len(links_global)
-            mid_point = num_subfolders // 2
-            main_folder_name = links_global[0]['subfolder'].split('/')[0]
+            num_batches = len(all_batches)
+            mid_point = num_batches // 2
 
             if half_option == "First Half":
-                start_idx, end_idx = 0, mid_point
+                start_batch, end_batch = 0, mid_point
             elif half_option == "Second Half":
-                start_idx, end_idx = mid_point, num_subfolders
+                start_batch, end_batch = mid_point, num_batches
 
+            # Flatten the selected batches into a single list
+            selected_batches = [item for sublist in all_batches[start_batch:end_batch] for item in sublist]
+
+            main_folder_name = selected_batches[0]['subfolder'].split('/')[0]
             st.write(f"Creating ZIP file for the {half_option.lower()}...")
+
             try:
-                zip_data, zip_file_name = asyncio.run(download_images_async(links_global, main_folder_name, start_idx, end_idx))
+                zip_data, zip_file_name = asyncio.run(download_images_async(selected_batches, main_folder_name, 0, len(selected_batches)))
                 st.session_state['zip_buffer'] = zip_data
                 st.session_state['zip_file_name'] = zip_file_name
             except Exception as e:
