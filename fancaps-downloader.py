@@ -6,7 +6,6 @@ import zipfile
 import io
 
 from scraper.crawler import Crawler
-from stqdm.stqdm import stqdm
 
 
 st.title('Fancaps Downloader')
@@ -44,21 +43,26 @@ async def download_images_async(links_group, main_folder_name, part_number):
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w') as zipf:
         async with aiohttp.ClientSession() as session:
-            tasks = []
+            total_tasks = sum(len(item['links']) for item in links_group)
+            progress_bar = st.progress(0)
+            completed_tasks = 0
             for item in links_group:
                 subfolder = item['subfolder']
                 links = item['links']
 
                 st.write(f"Processing subfolder: **{subfolder}**")
-                tasks.extend(
+
+                tasks = [
                     download_image(session, url, subfolder, zipf)
                     for url in links
-                )
+                ]
 
-            for task in stqdm(asyncio.as_completed(tasks), total=len(tasks), desc="Downloading images"):
-                await task
+                for task in asyncio.as_completed(tasks):
+                    await task
+                    completed_tasks += 1
+                    progress_bar.progress(completed_tasks / total_tasks)
 
-            st.write(f"Completed processing subfolder: **{subfolder}**")
+                st.write(f"Completed processing subfolder: **{subfolder}**")
 
     zip_buffer.seek(0)
     zip_file_name = f"{main_folder_name}_part_{part_number}.zip"
